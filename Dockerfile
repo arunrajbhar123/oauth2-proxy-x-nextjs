@@ -1,20 +1,32 @@
-# Use the official Node.js image.
-FROM node:latest
+# Step 1: Build the Next.js app
+FROM node:18 AS build
 
-# Create and change to the app directory.
 WORKDIR /app
 
-# Copy application dependency manifests to the container image.
-COPY package*.json ./
-
-# Install dependencies.
+# Copy dependencies and install
+COPY package.json package-lock.json ./
 RUN npm install
 
-# Copy local code to the container image.
-COPY . .
+# Copy the application code
+COPY . ./
 
-# Build the Next.js app.
+# Build the app
 RUN npm run build
 
-# Start the Next.js app.
+# Step 2: Serve the Next.js app
+FROM node:18-slim
+
+WORKDIR /app
+
+# Copy built application from the build stage
+COPY --from=build /app ./
+RUN npm install --production
+
+# Expose the dynamic port (Render sets this through the PORT environment variable)
+EXPOSE 3000
+
+# Set the port that Next.js should use
+ENV PORT 3000
+
+# Start the Next.js app and make sure it respects the dynamic port (Render uses $PORT)
 CMD ["npm", "start"]
